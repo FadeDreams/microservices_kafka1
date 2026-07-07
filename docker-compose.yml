@@ -42,11 +42,27 @@ services:
     networks:
       - my_network
 
-  redis:
-    image: "redis:latest"
-    command: ["redis-server", "--maxmemory", "1g"]
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    ulimits:
+      memlock: -1
+    command: ["--maxmemory=1gb", "--proactor_threads=4"]
     ports:
       - "6379:6379"
+    volumes:
+      - dragonfly-data:/data
+    networks:
+      - my_network
+
+  dragonfly-replica:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    depends_on:
+      - dragonfly
+    ulimits:
+      memlock: -1
+    command: ["--maxmemory=1gb", "--replicaof=dragonfly:6379"]
+    ports:
+      - "6380:6379"
     networks:
       - my_network
 
@@ -82,6 +98,7 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - kafka
+      - dragonfly
     ports:
       - 8001:8001
     volumes:
@@ -122,3 +139,4 @@ volumes:
   order-data:
   order-reader-django:
   buy-go:
+  dragonfly-data:
